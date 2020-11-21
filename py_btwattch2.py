@@ -10,8 +10,8 @@ from functools import reduce
 import bisect
 import csv
 
-GATT_CHARACTERISTICS_UUID_TX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
-GATT_CHARACTERISTICS_UUID_RX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
+GATT_CHARACTERISTIC_UUID_TX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
+GATT_CHARACTERISTIC_UUID_RX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
 CMD_HEADER = bytearray.fromhex('aa')
 
 CMD_REALTIME_MONITORING = bytearray.fromhex('08')
@@ -43,8 +43,8 @@ class BTWATTCH2:
         self.loop = asyncio.get_event_loop()
 
         self.services = self.loop.run_until_complete(self.setup())
-        self.Tx = self.services.get_characteristic(GATT_CHARACTERISTICS_UUID_TX)
-        self.Rx = self.services.get_characteristic(GATT_CHARACTERISTICS_UUID_RX)
+        self.Tx = self.services.get_characteristic(GATT_CHARACTERISTIC_UUID_TX)
+        self.Rx = self.services.get_characteristic(GATT_CHARACTERISTIC_UUID_RX)
         self.enable_notify()
 
         self.callback = print_measurement
@@ -130,7 +130,7 @@ class main(ttk.Frame):
 
         self.tree = None
         self.columns = None
-        self.selected_column = 0
+        self.selected_column_num = 0
         self.column_reversed = True
 
         self.started = threading.Event()
@@ -140,7 +140,7 @@ class main(ttk.Frame):
         self.master.protocol('WM_DELETE_WINDOW', self._kill_measure)
 
     def discover_wattcheker(self):
-        def tt(selected):
+        def confirm_selection(selected):
             frame_device_list.destroy()
             ordinal = selected.get()
             bdaddr = list_wattchecker[ordinal].address
@@ -158,7 +158,7 @@ class main(ttk.Frame):
             for i in range(len(list_wattchecker)):
                 ttk.Radiobutton(frame_device_list, value=i, variable=selected, text=list_wattchecker[i]).pack()
             
-            button = ttk.Button(frame_device_list, text='connect', command=lambda: tt(selected))
+            button = ttk.Button(frame_device_list, text='connect', command=lambda: confirm_selection(selected))
             button.pack(anchor=tk.CENTER)
         else:
             messagebox.showerror('RS-BTWATTCH2', 'Device not found')
@@ -171,29 +171,47 @@ class main(ttk.Frame):
         self._create_widgets()
 
     def add_row(self, voltage, current, wattage, timestamp):
-        measurement = timestamp, round(wattage,3), int(current), round(voltage,2)
-        curr_col = [self.tree.set(k, self.selected_column) for k in self.tree.get_children('')]
-        to_insert = measurement[self.selected_column]
+        measurement = timestamp, round(wattage, 3), int(current), round(voltage, 2)
+        selected_column = [self.tree.set(k, self.selected_column_num) for k in self.tree.get_children('')]
+        new_row = measurement[self.selected_column_num]
         
         if self.column_reversed:
-            reversed_index = bisect.bisect_right(curr_col[::-1], str(to_insert))
-            index = len(curr_col) - reversed_index
+            if self.selected_column_num == 0:
+                sorted_list = selected_column[::-1]
+                to_add = str(new_row)
+            else:
+                sorted_list = [float(f) for f in selected_column[::-1]]
+                to_add = float(new_row)
+            
+            position_to_insert = len(selected_column) - bisect.bisect_right(sorted_list, to_add)
         else:
-            index = bisect.bisect_left(curr_col, str(to_insert))
+            if self.selected_column_num == 0:
+                sorted_list = selected_column
+                to_add = str(new_row)
+            else:
+                sorted_list = [float(f) for f in selected_column]
+                to_add = float(new_row)
+            
+            position_to_insert = bisect.bisect_left(sorted_list, to_add)
 
-        self.tree.insert('', index=index, values=measurement)
+        self.tree.insert('', index=position_to_insert, values=measurement)
 
     def sort_column(self, treeview, column):
         is_reverse = not self.column_reversed
+        self.column_reversed = is_reverse
+        self.selected_column_num = column
 
         l = [(treeview.set(k, column), k) for k in treeview.get_children('')]
-        l.sort(key=lambda x: x[0], reverse=is_reverse)
+        if self.selected_column_num == 0:
+            func = lambda x: x[0]
+        else:
+            func = lambda x: float(x[0])
+        
+        l.sort(key=func, reverse=is_reverse)
 
         for index, (_, item_id) in enumerate(l):
             treeview.move(item_id, '', index)
 
-        self.selected_column = column
-        self.column_reversed = is_reverse
 
     def _kill_measure(self):
         self.running = False
