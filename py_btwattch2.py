@@ -23,18 +23,15 @@ def crc8(payload: bytearray):
     def crc1(crc, times=0):
         if times >= 8:
             return crc
+        elif crc & 0x80:
+            return crc1((crc << 1 ^ polynomial) & 0xff, times+1)
         else:
-            if crc & 0x80:
-                return crc1((crc << 1 ^ polynomial) & 0xff, times+1)
-            else:
-                return crc1(crc << 1, times+1)
+            return crc1(crc << 1, times+1)
     
     return reduce(lambda x, y: crc1(y & 0xff ^ x), payload, 0x00)
 
 def print_measurement(voltage, current, wattage, timestamp):
-    print(
-        "{0},{1:.3f}W,{2:.3f}V,{3:.3f}mA".format(timestamp, wattage, voltage, current)
-    )
+    print("{0},{1:.3f}W,{2:.3f}V,{3:.3f}mA".format(timestamp, wattage, voltage, current))
 
 class BTWATTCH2:
     def __init__(self, address):
@@ -51,7 +48,6 @@ class BTWATTCH2:
 
     async def setup(self):
         self.client = BleakClient(self.address)
-        
         await self.client.connect()
         return await self.client.get_services()
     
@@ -68,9 +64,8 @@ class BTWATTCH2:
         return self.loop.run_until_complete(_disable_notify())
 
     def cmd(self, payload: bytearray):
-        header = CMD_HEADER
         pld_length = len(payload).to_bytes(2, 'big')
-        return header + pld_length + payload + crc8(payload).to_bytes(1, 'big')
+        return CMD_HEADER + pld_length + payload + crc8(payload).to_bytes(1, 'big')
 
     def write(self, payload: bytearray):
         async def _write(payload):
@@ -137,7 +132,7 @@ class main(ttk.Frame):
         self.running = True
         thread = threading.Thread(target=self._measure_thread)
         thread.start()
-        self.master.protocol('WM_DELETE_WINDOW', self._kill_measure)
+        self.master.protocol('WM_DELETE_WINDOW', self._kill_app)
 
     def discover_wattcheker(self):
         def confirm_selection(selected):
@@ -197,23 +192,21 @@ class main(ttk.Frame):
         self.tree.insert('', index=position_to_insert, values=measurement)
 
     def sort_column(self, treeview, column):
-        is_reverse = not self.column_reversed
-        self.column_reversed = is_reverse
+        self.column_reversed = not self.column_reversed
         self.selected_column_num = column
 
-        l = [(treeview.set(k, column), k) for k in treeview.get_children('')]
         if self.selected_column_num == 0:
             func = lambda x: x[0]
         else:
             func = lambda x: float(x[0])
         
-        l.sort(key=func, reverse=is_reverse)
+        l = [(treeview.set(k, column), k) for k in treeview.get_children('')]
+        l.sort(key=func, reverse=self.column_reversed)
 
         for index, (_, item_id) in enumerate(l):
             treeview.move(item_id, '', index)
 
-
-    def _kill_measure(self):
+    def _kill_app(self):
         self.running = False
         self.started.set()
         self.master.destroy()
@@ -290,9 +283,8 @@ class main(ttk.Frame):
         frame_treeview.columnconfigure(0, weight=1)
         frame_treeview.rowconfigure(0, weight=1)
 
-        columns = (0, 1, 2, 3)
-        self.columns = columns
-        self.tree = ttk.Treeview(frame_treeview, columns=columns, show='headings', height=25)
+        self.columns = (0, 1, 2, 3)
+        self.tree = ttk.Treeview(frame_treeview, columns=self.columns, show='headings', height=25)
         self.tree.grid(row=0, column=0, sticky=tk.NSEW)
 
         vscrollbar = ttk.Scrollbar(frame_treeview, orient=tk.VERTICAL, command=self.tree.yview)
