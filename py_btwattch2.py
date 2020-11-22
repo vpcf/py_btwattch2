@@ -126,9 +126,9 @@ class main(ttk.Frame):
 
         self.tree = None
         self.columns = None
-        self.selected_column_num = 0
-        self.column_reversed = True
-
+        self.treeview_active_col_num = 0
+        self.treeview_is_ascending = False
+        
         self.started = threading.Event()
         self.running = True
         thread = threading.Thread(target=self._measure_thread)
@@ -168,41 +168,41 @@ class main(ttk.Frame):
 
     def add_row(self, voltage, current, wattage, timestamp):
         measurement = timestamp, round(wattage, 3), int(current), round(voltage, 2)
-        selected_column = [self.tree.set(k, self.selected_column_num) for k in self.tree.get_children('')]
-        new_row = measurement[self.selected_column_num]
+        active_col = [self.tree.set(k, self.treeview_active_col_num) for k in self.tree.get_children('')]
+        new_row = measurement[self.treeview_active_col_num]
         
-        if self.column_reversed:
-            if self.selected_column_num == 0:
-                sorted_list = selected_column[::-1]
+        if self.treeview_is_ascending:
+            if self.treeview_active_col_num == 0:
+                asc_sorted = active_col
                 to_add = str(new_row)
             else:
-                sorted_list = [float(f) for f in selected_column[::-1]]
+                asc_sorted = [float(f) for f in active_col]
                 to_add = float(new_row)
             
-            position_to_insert = len(selected_column) - bisect.bisect_right(sorted_list, to_add)
+            position_to_insert = bisect.bisect_left(asc_sorted, to_add)
         else:
-            if self.selected_column_num == 0:
-                sorted_list = selected_column
+            if self.treeview_active_col_num == 0:
+                asc_sorted = active_col[::-1]
                 to_add = str(new_row)
             else:
-                sorted_list = [float(f) for f in selected_column]
+                asc_sorted = [float(f) for f in active_col[::-1]]
                 to_add = float(new_row)
             
-            position_to_insert = bisect.bisect_left(sorted_list, to_add)
+            position_to_insert = len(active_col) - bisect.bisect_right(asc_sorted, to_add)
 
         self.tree.insert('', index=position_to_insert, values=measurement)
 
     def sort_column(self, treeview, column):
-        self.column_reversed = not self.column_reversed
-        self.selected_column_num = column
+        self.treeview_is_ascending = not self.treeview_is_ascending
+        self.treeview_active_col_num = column
 
-        if self.selected_column_num == 0:
+        if self.treeview_active_col_num == 0:
             func = lambda x: x[0]
         else:
             func = lambda x: float(x[0])
         
         l = [(treeview.set(k, column), k) for k in treeview.get_children('')]
-        l.sort(key=func, reverse=self.column_reversed)
+        l.sort(key=func, reverse=not self.treeview_is_ascending)
 
         for index, (_, item_id) in enumerate(l):
             treeview.move(item_id, '', index)
