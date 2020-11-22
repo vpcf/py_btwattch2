@@ -14,9 +14,10 @@ GATT_CHARACTERISTIC_UUID_TX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
 GATT_CHARACTERISTIC_UUID_RX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
 CMD_HEADER = bytearray.fromhex('aa')
 
-CMD_REALTIME_MONITORING = bytearray.fromhex('08')
-CMD_TURN_ON = bytearray.fromhex('a701')
-CMD_TURN_OFF = bytearray.fromhex('a700')
+PAYLOAD_RTC_TIMER = bytearray.fromhex('01')
+PAYLOAD_TURN_ON = bytearray.fromhex('a701')
+PAYLOAD_TURN_OFF = bytearray.fromhex('a700')
+PAYLOAD_REALTIME_MONITORING = bytearray.fromhex('08')
 
 def crc8(payload: bytearray):
     polynomial = 0x85
@@ -81,17 +82,17 @@ class BTWATTCH2:
         time.sleep(1 - datetime.datetime.now().microsecond/1e6)
 
         d = datetime.datetime.now().timetuple()
-        payload = 0x01, d.tm_sec, d.tm_min, d.tm_hour, d.tm_mday, d.tm_mon-1, d.tm_year-1900, d.tm_wday
+        payload = PAYLOAD_RTC_TIMER[0], d.tm_sec, d.tm_min, d.tm_hour, d.tm_mday, d.tm_mon-1, d.tm_year-1900, d.tm_wday
         self.write(bytearray(payload))
 
     def on(self):
-        self.write(CMD_TURN_ON)
+        self.write(PAYLOAD_TURN_ON)
         
     def off(self):
-        self.write(CMD_TURN_OFF)
+        self.write(PAYLOAD_TURN_OFF)
 
     def measure(self):
-        self.write(CMD_REALTIME_MONITORING)
+        self.write(PAYLOAD_REALTIME_MONITORING)
 
     def format_message(self):
         buffer = bytearray()
