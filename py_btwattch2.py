@@ -171,24 +171,17 @@ class main(ttk.Frame):
         active_col = [self.tree.set(k, self.treeview_active_col_num) for k in self.tree.get_children('')]
         new_row = measurement[self.treeview_active_col_num]
         
-        if self.treeview_is_ascending:
-            if self.treeview_active_col_num == 0:
-                asc_sorted = active_col
-                to_add = str(new_row)
-            else:
-                asc_sorted = [float(f) for f in active_col]
-                to_add = float(new_row)
-            
-            position_to_insert = bisect.bisect_left(asc_sorted, to_add)
+        if self.treeview_active_col_num == 0:
+            lst = active_col
+            element = str(new_row)
         else:
-            if self.treeview_active_col_num == 0:
-                asc_sorted = active_col[::-1]
-                to_add = str(new_row)
-            else:
-                asc_sorted = [float(f) for f in active_col[::-1]]
-                to_add = float(new_row)
+            lst = [float(f) for f in active_col]
+            element = float(new_row)
             
-            position_to_insert = len(active_col) - bisect.bisect_right(asc_sorted, to_add)
+        if self.treeview_is_ascending:
+            position_to_insert = bisect.bisect_left(lst, element)
+        else:
+            position_to_insert = len(lst) - bisect.bisect_right(lst[::-1], element)
 
         self.tree.insert('', index=position_to_insert, values=measurement)
 
