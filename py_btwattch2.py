@@ -32,7 +32,7 @@ def crc8(payload: bytearray):
     return reduce(lambda x, y: crc1(y & 0xff ^ x), payload, 0x00)
 
 def print_measurement(voltage, current, wattage, timestamp):
-    print("{0},{1:.3f}W,{2:.3f}V,{3:.3f}mA".format(timestamp, wattage, voltage, current))
+    print('{0},{1:.3f}W,{2:.3f}V,{3:.3f}mA'.format(timestamp, wattage, voltage, current))
 
 class BTWATTCH2:
     def __init__(self, address):
@@ -257,9 +257,9 @@ class main(ttk.Frame):
         fname = tkfd.asksaveasfilename(filetypes=[('CSV File', '*.csv'),('', '*.*')], defaultextension='.csv', initialdir='./')
         if fname:
             with open(fname, mode='w', newline='') as f:
-                    writer = csv.writer(f)
-                    writer.writerow(['datetime', 'voltage[V]', 'current[mA]', 'voltage[V]'])
-                    writer.writerows(out)
+                writer = csv.writer(f)
+                writer.writerow(['datetime', 'voltage[V]', 'current[mA]', 'voltage[V]'])
+                writer.writerows(out)
         
         return 'break'
         
@@ -293,12 +293,12 @@ class main(ttk.Frame):
         self.tree.column(self.columns[2], width=100, minwidth=100, stretch=tk.NO)
         self.tree.column(self.columns[3], width=100, minwidth=100)
 
-        self.tree.heading(self.columns[0], text="datetime", command=lambda: self.sort_column(self.tree, self.columns[0]))
-        self.tree.heading(self.columns[1], text="wattage[W]", command=lambda: self.sort_column(self.tree, self.columns[1]))
-        self.tree.heading(self.columns[2], text="current[mA]", command=lambda: self.sort_column(self.tree, self.columns[2]))
-        self.tree.heading(self.columns[3], text="voltage[V]", command=lambda: self.sort_column(self.tree, self.columns[3]))
+        self.tree.heading(self.columns[0], text='datetime', command=lambda: self.sort_column(self.tree, self.columns[0]))
+        self.tree.heading(self.columns[1], text='wattage[W]', command=lambda: self.sort_column(self.tree, self.columns[1]))
+        self.tree.heading(self.columns[2], text='current[mA]', command=lambda: self.sort_column(self.tree, self.columns[2]))
+        self.tree.heading(self.columns[3], text='voltage[V]', command=lambda: self.sort_column(self.tree, self.columns[3]))
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     base = tk.Tk()
     main(base)
     base.mainloop()
