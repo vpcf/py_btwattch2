@@ -277,8 +277,9 @@ class main(ttk.Frame):
         frame_treeview.columnconfigure(0, weight=1)
         frame_treeview.rowconfigure(0, weight=1)
 
+        ttk.Style().layout('Treeview', [('Treeview.treearea', {'sticky': 'nswe'})])
         self.columns = (0, 1, 2, 3)
-        self.tree = ttk.Treeview(frame_treeview, columns=self.columns, show='headings', height=25)
+        self.tree = ttk.Treeview(frame_treeview, style='Treeview', columns=self.columns, show='headings', height=25)
         self.tree.grid(row=0, column=0, sticky=tk.NSEW)
 
         vscrollbar = ttk.Scrollbar(frame_treeview, orient=tk.VERTICAL, command=self.tree.yview)
