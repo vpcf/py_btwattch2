@@ -20,16 +20,16 @@ PAYLOAD_TURN_OFF = bytearray.fromhex('a700')
 PAYLOAD_REALTIME_MONITORING = bytearray.fromhex('08')
 
 def crc8(payload: bytearray):
-    polynomial = 0x85
+    POLYNOMIAL = 0x85
     def crc1(crc, times=0):
         if times >= 8:
-            return crc
+            return crc & 0xff
         elif crc & 0x80:
-            return crc1((crc << 1 ^ polynomial) & 0xff, times+1)
+            return crc1(crc << 1 ^ POLYNOMIAL, times+1)
         else:
             return crc1(crc << 1, times+1)
     
-    return reduce(lambda x, y: crc1(y & 0xff ^ x), payload, 0x00)
+    return reduce(lambda x, y: crc1(y ^ x), payload, 0x00)
 
 def print_measurement(voltage, current, wattage, timestamp):
     print('{0},{1:.3f}W,{2:.3f}V,{3:.3f}mA'.format(timestamp, wattage, voltage, current))
