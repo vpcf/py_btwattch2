@@ -21,10 +21,11 @@ PAYLOAD_REALTIME_MONITORING = bytearray.fromhex('08')
 
 def crc8(payload: bytearray):
     POLYNOMIAL = 0x85
+    MSBIT = 0x80
     def crc1(crc, times=0):
         if times >= 8:
             return crc & 0xff
-        elif crc & 0x80:
+        elif crc & MSBIT :
             return crc1(crc << 1 ^ POLYNOMIAL, times+1)
         else:
             return crc1(crc << 1, times+1)
