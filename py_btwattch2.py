@@ -14,7 +14,7 @@ GATT_CHARACTERISTIC_UUID_TX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
 GATT_CHARACTERISTIC_UUID_RX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
 CMD_HEADER = bytearray.fromhex('aa')
 
-PAYLOAD_RTC_TIMER = bytearray.fromhex('01')
+PAYLOAD_TIMER = bytearray.fromhex('01')
 PAYLOAD_TURN_ON = bytearray.fromhex('a701')
 PAYLOAD_TURN_OFF = bytearray.fromhex('a700')
 PAYLOAD_REALTIME_MONITORING = bytearray.fromhex('08')
@@ -79,11 +79,16 @@ class BTWATTCH2:
         else:
             return self.loop.run_until_complete(_write(payload))
 
-    def set_rtc(self):
+    def set_timer(self):
         time.sleep(1 - datetime.datetime.now().microsecond/1e6)
 
         d = datetime.datetime.now().timetuple()
-        payload = PAYLOAD_RTC_TIMER[0], d.tm_sec, d.tm_min, d.tm_hour, d.tm_mday, d.tm_mon-1, d.tm_year-1900, d.tm_wday
+        payload = (
+            PAYLOAD_TIMER[0], 
+            d.tm_sec, d.tm_min, d.tm_hour, 
+            d.tm_mday, d.tm_mon-1, d.tm_year-1900, 
+            d.tm_wday
+        )
         self.write(bytearray(payload))
 
     def on(self):
@@ -163,7 +168,7 @@ class main(ttk.Frame):
 
     def setup_wattcheker(self, bdaddr):
         self.wattchecker = BTWATTCH2(bdaddr)
-        self.wattchecker.set_rtc()
+        self.wattchecker.set_timer()
         self.wattchecker.callback = self.add_row
         self._create_widgets()
 
