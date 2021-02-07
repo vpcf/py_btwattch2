@@ -141,23 +141,25 @@ class main(ttk.Frame):
         thread.start()
         self.master.protocol('WM_DELETE_WINDOW', self._kill_app)
 
-    def add_row(self, voltage, current, wattage, timestamp):
-        measurement = timestamp, round(wattage, 3), int(current), round(voltage, 2)
+    def locate_insertion_position(self, measurement):
         active_col = [self.tree.set(k, self.treeview_active_col_num) for k in self.tree.get_children('')]
-        new_row = measurement[self.treeview_active_col_num]
+        new_col_element = measurement[self.treeview_active_col_num]
         
         if self.treeview_active_col_num == 0:
             lst = active_col
-            element = str(new_row)
+            element = str(new_col_element)
         else:
             lst = [float(f) for f in active_col]
-            element = float(new_row)
+            element = float(new_col_element)
             
         if self.treeview_is_ascending:
-            position_to_insert = bisect.bisect_left(lst, element)
+            return bisect.bisect_left(lst, element)
         else:
-            position_to_insert = len(lst) - bisect.bisect_right(lst[::-1], element)
+            return len(lst) - bisect.bisect_right(lst[::-1], element)
 
+    def add_row(self, voltage, current, wattage, timestamp):
+        measurement = timestamp, round(wattage, 3), int(current), round(voltage, 2)
+        position_to_insert = self.locate_insertion_position(measurement)
         self.tree.insert('', index=position_to_insert, values=measurement)
 
     def sort_column(self, treeview, column):
