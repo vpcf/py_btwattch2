@@ -33,7 +33,7 @@ def crc8(payload: bytearray):
     return reduce(lambda x, y: crc1(y ^ x), payload, 0x00)
 
 def print_measurement(voltage, current, wattage, timestamp):
-    print('{0},{1:.3f}W,{2:.3f}V,{3:.3f}mA'.format(timestamp, wattage, voltage, current))
+    print('{{"datetime":"{0}", "wattage":{1:.3f}, "voltage":{2:.3f}, "current":{3:.3f}}}'.format(timestamp, wattage, voltage, current))
 
 class BTWATTCH2:
     def __init__(self, address):
