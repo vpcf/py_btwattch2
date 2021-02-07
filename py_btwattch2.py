@@ -122,55 +122,24 @@ class BTWATTCH2:
         return _format_message
 
 class main(ttk.Frame):
-    def __init__(self, master):
+    def __init__(self, master, wattchecker):
         super().__init__(master)
         self.master = master
         self.master.title('RS-BTWATTCH2')
 
-        self.wattchecker = None
-        self.discover_wattcheker()
-
         self.tree = None
         self.columns = None
+        self._create_widgets()
         self.treeview_active_col_num = 0
         self.treeview_is_ascending = False
         
+        self.wattchecker = wattchecker
+        self.wattchecker.callback = self.add_row
         self.started = threading.Event()
         self.running = True
         thread = threading.Thread(target=self._measure_thread)
         thread.start()
         self.master.protocol('WM_DELETE_WINDOW', self._kill_app)
-
-    def discover_wattcheker(self):
-        def confirm_selection(selected):
-            frame_device_list.destroy()
-            ordinal = selected.get()
-            bdaddr = list_wattchecker[ordinal].address
-            self.setup_wattcheker(bdaddr)
-        
-        frame_device_list = tk.Frame(self.master)
-        frame_device_list.grid(sticky=tk.NSEW)
-        self.master.resizable(False, False)
-
-        ble_devices = asyncio.get_event_loop().run_until_complete(discover())
-        list_wattchecker = [d for d in ble_devices if 'BTWATTCH2' in d.name]
-
-        if list_wattchecker:
-            selected = tk.IntVar()
-            for i in range(len(list_wattchecker)):
-                ttk.Radiobutton(frame_device_list, value=i, variable=selected, text=list_wattchecker[i]).pack()
-            
-            button = ttk.Button(frame_device_list, text='connect', command=lambda: confirm_selection(selected))
-            button.pack(anchor=tk.CENTER)
-        else:
-            messagebox.showerror('RS-BTWATTCH2', 'Device not found')
-            sys.exit(0)
-
-    def setup_wattcheker(self, bdaddr):
-        self.wattchecker = BTWATTCH2(bdaddr)
-        self.wattchecker.set_timer()
-        self.wattchecker.callback = self.add_row
-        self._create_widgets()
 
     def add_row(self, voltage, current, wattage, timestamp):
         measurement = timestamp, round(wattage, 3), int(current), round(voltage, 2)
@@ -305,7 +274,39 @@ class main(ttk.Frame):
         self.tree.heading(self.columns[2], text='current[mA]', command=lambda: self.sort_column(self.tree, self.columns[2]))
         self.tree.heading(self.columns[3], text='voltage[V]', command=lambda: self.sort_column(self.tree, self.columns[3]))
 
-if __name__ == '__main__':
+def setup_wattcheker(bdaddr):
+    wattchecker = BTWATTCH2(bdaddr)
+    wattchecker.set_timer()
+
     base = tk.Tk()
-    main(base)
+    main(base, wattchecker)
     base.mainloop()
+
+def discover_wattcheker():
+    def confirm_selection(selected):
+        master.destroy()
+        ordinal = selected.get()
+        bdaddr = list_wattchecker[ordinal].address
+        setup_wattcheker(bdaddr)
+    
+    master = tk.Tk()
+    frame_device_list = tk.Frame(master)
+    frame_device_list.grid(sticky=tk.NSEW)
+    master.resizable(False, False)
+    ble_devices = asyncio.get_event_loop().run_until_complete(discover())
+    list_wattchecker = [d for d in ble_devices if 'BTWATTCH2' in d.name]
+    if list_wattchecker:
+        selected = tk.IntVar()
+        for i in range(len(list_wattchecker)):
+            ttk.Radiobutton(frame_device_list, value=i, variable=selected, text=list_wattchecker[i]).pack()
+        
+        button = ttk.Button(frame_device_list, text='connect', command=lambda: confirm_selection(selected))
+        button.pack(anchor=tk.CENTER)
+    else:
+        messagebox.showerror('RS-BTWATTCH2', 'Device not found')
+        sys.exit(0)
+    
+    master.mainloop()
+
+if __name__ == '__main__':
+    discover_wattcheker()
