@@ -99,6 +99,8 @@ class BTWATTCH2:
 
     def measure(self):
         self.write(PAYLOAD_REALTIME_MONITORING)
+        ms = datetime.datetime.now().microsecond
+        self.loop.run_until_complete(asyncio.sleep(1.05 - ms/1e6))
 
     def format_message(self):
         buffer = bytearray()
@@ -187,9 +189,6 @@ class main(ttk.Frame):
         while self.running:
             if self.started.is_set():
                 self.wattchecker.measure()
-
-                ms = datetime.datetime.now().microsecond
-                self.wattchecker.loop.run_until_complete(asyncio.sleep(1.05 - ms/1e6))
             else:
                 self.started.wait(3)
         
