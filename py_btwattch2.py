@@ -48,6 +48,10 @@ class BTWATTCH2:
 
         self.callback = print_measurement
 
+    def model_number(self):
+        char_model_number_string = self.services.get_characteristic('00002A24-0000-1000-8000-00805F9B34FB')
+        return asyncio.run(self.client.read_gatt_char(char_model_number_string)).decode()
+
     async def setup(self):
         self.client = BleakClient(self.address)
         await self.client.connect()
@@ -127,20 +131,22 @@ class main(ttk.Frame):
     def __init__(self, master, wattchecker):
         super().__init__(master)
         self.master = master
-        self.master.title('RS-BTWATTCH2')
-
         self.tree = None
         self.columns = None
+
+        self.wattchecker = wattchecker
+        self.master.title(self.wattchecker.model_number())
+        self.wattchecker.callback = self.add_row
+
         self._create_widgets()
         self.treeview_active_col_num = 0
         self.treeview_is_ascending = False
         
-        self.wattchecker = wattchecker
-        self.wattchecker.callback = self.add_row
         self.started = threading.Event()
         self.running = True
         thread = threading.Thread(target=self._measure_thread)
         thread.start()
+        
         self.master.protocol('WM_DELETE_WINDOW', self._kill_app)
 
     def locate_insertion_position(self, measurement):
@@ -281,6 +287,7 @@ def setup_wattcheker(bdaddr):
 
     base = tk.Tk()
     main(base, wattchecker)
+
     base.mainloop()
 
 def discover_wattcheker():
