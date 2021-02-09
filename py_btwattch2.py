@@ -281,7 +281,7 @@ class main(ttk.Frame):
         self.tree.heading(self.columns[2], text='current[mA]', command=lambda: self.sort_column(self.tree, self.columns[2]))
         self.tree.heading(self.columns[3], text='voltage[V]', command=lambda: self.sort_column(self.tree, self.columns[3]))
 
-def setup_wattcheker(bdaddr):
+def setup_btwattch2(bdaddr):
     wattchecker = BTWATTCH2(bdaddr)
     wattchecker.set_timer()
 
@@ -290,19 +290,23 @@ def setup_wattcheker(bdaddr):
 
     base.mainloop()
 
-def discover_wattcheker():
+def discover_btwattch2():
+    ble_devices = asyncio.get_event_loop().run_until_complete(discover())
+    return [d for d in ble_devices if 'BTWATTCH2' in d.name]
+
+def device_selection_window():
     def confirm_selection(selected):
-        master.destroy()
+        dialog.destroy()
         ordinal = selected.get()
         bdaddr = list_wattchecker[ordinal].address
-        setup_wattcheker(bdaddr)
-    
-    master = tk.Tk()
-    frame_device_list = tk.Frame(master)
+        setup_btwattch2(bdaddr)
+
+    dialog = tk.Tk()
+    dialog.resizable(False, False)
+    frame_device_list = tk.Frame(dialog)
     frame_device_list.grid(sticky=tk.NSEW)
-    master.resizable(False, False)
-    ble_devices = asyncio.get_event_loop().run_until_complete(discover())
-    list_wattchecker = [d for d in ble_devices if 'BTWATTCH2' in d.name]
+
+    list_wattchecker = discover_btwattch2()
     if list_wattchecker:
         selected = tk.IntVar()
         for i in range(len(list_wattchecker)):
@@ -314,7 +318,7 @@ def discover_wattcheker():
         messagebox.showerror('RS-BTWATTCH2', 'Device not found')
         sys.exit(0)
     
-    master.mainloop()
+    dialog.mainloop()
 
 if __name__ == '__main__':
-    discover_wattcheker()
+    device_selection_window()
