@@ -12,6 +12,7 @@ import csv
 
 GATT_CHARACTERISTIC_UUID_TX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
 GATT_CHARACTERISTIC_UUID_RX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
+GATT_CHARACTERISTIC_DEVICE_NAME = '00002A24-0000-1000-8000-00805F9B34FB'
 CMD_HEADER = bytearray.fromhex('aa')
 
 PAYLOAD_TIMER = bytearray.fromhex('01')
@@ -44,13 +45,15 @@ class BTWATTCH2:
         self.services = self.loop.run_until_complete(self.setup())
         self.Tx = self.services.get_characteristic(GATT_CHARACTERISTIC_UUID_TX)
         self.Rx = self.services.get_characteristic(GATT_CHARACTERISTIC_UUID_RX)
+        self.char_device_name = self.services.get_characteristic(GATT_CHARACTERISTIC_DEVICE_NAME)
         self.enable_notify()
 
         self.callback = print_measurement
 
+    @property
     def model_number(self):
-        char_model_number_string = self.services.get_characteristic('00002A24-0000-1000-8000-00805F9B34FB')
-        return asyncio.run(self.client.read_gatt_char(char_model_number_string)).decode()
+        model_number_bytearray = asyncio.run(self.client.read_gatt_char(self.char_device_name))
+        return model_number_bytearray.decode()
 
     async def setup(self):
         self.client = BleakClient(self.address)
@@ -135,7 +138,7 @@ class main(ttk.Frame):
         self.columns = None
 
         self.wattchecker = wattchecker
-        self.master.title(self.wattchecker.model_number())
+        self.master.title(self.wattchecker.model_number)
         self.wattchecker.callback = self.add_row
 
         self._create_widgets()
