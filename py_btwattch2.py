@@ -156,12 +156,8 @@ class main(ttk.Frame):
         active_col = [self.tree.set(k, self.active_column) for k in self.tree.get_children('')]
         new_col_element = measurement[self.headings.index(self.active_column)]
         
-        if self.active_column == self.headings[0]:
-            lst = active_col
-            element = str(new_col_element)
-        else:
-            lst = [float(f) for f in active_col]
-            element = float(new_col_element)
+        lst = [self.convert_type_by_column(f) for f in active_col]
+        element = self.convert_type_by_column(new_col_element)
             
         if self.is_ascending:
             return bisect.bisect_left(lst, element)
@@ -176,17 +172,20 @@ class main(ttk.Frame):
     def sort_column(self, treeview, heading):
         self.is_ascending = not self.is_ascending
         self.active_column = heading
-        
-        if self.active_column == self.headings[0]:
-            func = lambda x: x[0]
-        else:
-            func = lambda x: float(x[0])
+
+        func = lambda x: self.convert_type_by_column(x[0])
         
         l = [(treeview.set(k, heading), k) for k in treeview.get_children('')]
         l.sort(key=func, reverse=not self.is_ascending)
 
         for index, (_, item_id) in enumerate(l):
             treeview.move(item_id, '', index)
+
+    def convert_type_by_column(self, value):
+        if self.active_column == self.headings[0]:
+            return str(value)
+        else:
+            return float(value)
 
     def _kill_app(self):
         self.running = False
