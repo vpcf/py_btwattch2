@@ -117,7 +117,7 @@ class BTWATTCH2:
                 buffer = buffer + data
             else:
                 data = buffer + data
-                if data[3] == 0x08:
+                if data[3] == PAYLOAD_REALTIME_MONITORING[0]:
                     voltage = int.from_bytes(data[5:11], 'little') / (16**6)
                     current = int.from_bytes(data[11:17], 'little') / (32**6) * 1000
                     wattage = int.from_bytes(data[17:23], 'little') / (16**6)
