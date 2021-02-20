@@ -135,15 +135,15 @@ class main(ttk.Frame):
         super().__init__(master)
         self.master = master
         self.tree = None
-        self.columns = None
+        self.headings = ('datetime', 'wattage[W]', 'current[mA]', 'voltage[V]')
 
         self.wattchecker = wattchecker
         self.master.title(self.wattchecker.model_number)
         self.wattchecker.callback = self.add_row
 
         self._create_widgets()
-        self.treeview_active_col_num = 0
-        self.treeview_is_ascending = False
+        self.active_column = self.headings[0]
+        self.is_ascending = False
         
         self.started = threading.Event()
         self.running = True
@@ -153,17 +153,17 @@ class main(ttk.Frame):
         self.master.protocol('WM_DELETE_WINDOW', self._kill_app)
 
     def locate_insertion_position(self, measurement):
-        active_col = [self.tree.set(k, self.treeview_active_col_num) for k in self.tree.get_children('')]
-        new_col_element = measurement[self.treeview_active_col_num]
+        active_col = [self.tree.set(k, self.active_column) for k in self.tree.get_children('')]
+        new_col_element = measurement[self.headings.index(self.active_column)]
         
-        if self.treeview_active_col_num == 0:
+        if self.active_column == self.headings[0]:
             lst = active_col
             element = str(new_col_element)
         else:
             lst = [float(f) for f in active_col]
             element = float(new_col_element)
             
-        if self.treeview_is_ascending:
+        if self.is_ascending:
             return bisect.bisect_left(lst, element)
         else:
             return len(lst) - bisect.bisect_right(lst[::-1], element)
@@ -173,17 +173,17 @@ class main(ttk.Frame):
         position_to_insert = self.locate_insertion_position(measurement)
         self.tree.insert('', index=position_to_insert, values=measurement)
 
-    def sort_column(self, treeview, column):
-        self.treeview_is_ascending = not self.treeview_is_ascending
-        self.treeview_active_col_num = column
-
-        if self.treeview_active_col_num == 0:
+    def sort_column(self, treeview, heading):
+        self.is_ascending = not self.is_ascending
+        self.active_column = heading
+        
+        if self.active_column == self.headings[0]:
             func = lambda x: x[0]
         else:
             func = lambda x: float(x[0])
         
-        l = [(treeview.set(k, column), k) for k in treeview.get_children('')]
-        l.sort(key=func, reverse=not self.treeview_is_ascending)
+        l = [(treeview.set(k, heading), k) for k in treeview.get_children('')]
+        l.sort(key=func, reverse=not self.is_ascending)
 
         for index, (_, item_id) in enumerate(l):
             treeview.move(item_id, '', index)
@@ -263,8 +263,7 @@ class main(ttk.Frame):
         frame_treeview.rowconfigure(0, weight=1)
 
         ttk.Style().layout('Treeview', [('Treeview.treearea', {'sticky': 'nswe'})])
-        self.columns = (0, 1, 2, 3)
-        self.tree = ttk.Treeview(frame_treeview, style='Treeview', columns=self.columns, show='headings', height=25)
+        self.tree = ttk.Treeview(frame_treeview, style='Treeview', columns=self.headings, show='headings', height=25)
         self.tree.grid(row=0, column=0, sticky=tk.NSEW)
 
         vscrollbar = ttk.Scrollbar(frame_treeview, orient=tk.VERTICAL, command=self.tree.yview)
@@ -274,15 +273,15 @@ class main(ttk.Frame):
         self.tree.configure(yscrollcommand=vscrollbar.set, xscrollcommand=hscrollbar.set)
 
     def _set_columns(self):
-        self.tree.column(self.columns[0], width=150, minwidth=100, stretch=tk.NO)
-        self.tree.column(self.columns[1], width=100, minwidth=100, stretch=tk.NO)
-        self.tree.column(self.columns[2], width=100, minwidth=100, stretch=tk.NO)
-        self.tree.column(self.columns[3], width=100, minwidth=100)
+        self.tree.column(self.headings[0], width=150, minwidth=100, stretch=tk.NO)
+        self.tree.column(self.headings[1], width=100, minwidth=100, stretch=tk.NO)
+        self.tree.column(self.headings[2], width=100, minwidth=100, stretch=tk.NO)
+        self.tree.column(self.headings[3], width=100, minwidth=100)
 
-        self.tree.heading(self.columns[0], text='datetime', command=lambda: self.sort_column(self.tree, self.columns[0]))
-        self.tree.heading(self.columns[1], text='wattage[W]', command=lambda: self.sort_column(self.tree, self.columns[1]))
-        self.tree.heading(self.columns[2], text='current[mA]', command=lambda: self.sort_column(self.tree, self.columns[2]))
-        self.tree.heading(self.columns[3], text='voltage[V]', command=lambda: self.sort_column(self.tree, self.columns[3]))
+        self.tree.heading(self.headings[0], text=self.headings[0], command=lambda: self.sort_column(self.tree, self.headings[0]))
+        self.tree.heading(self.headings[1], text=self.headings[1], command=lambda: self.sort_column(self.tree, self.headings[1]))
+        self.tree.heading(self.headings[2], text=self.headings[2], command=lambda: self.sort_column(self.tree, self.headings[2]))
+        self.tree.heading(self.headings[3], text=self.headings[3], command=lambda: self.sort_column(self.tree, self.headings[3]))
 
 def setup_btwattch2(bdaddr):
     wattchecker = BTWATTCH2(bdaddr)
