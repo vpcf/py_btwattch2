@@ -170,26 +170,25 @@ class main(ttk.Frame):
         self.treeview_widget = treeview_widget(self.master)
       
     def _create_button(self):
-        frame_button = tk.Frame(self.master)
-        frame_button.grid(sticky=tk.NSEW)
+        self.grid(sticky=tk.NSEW)
 
-        button1 = ttk.Button(frame_button, text='ON', width=5)
+        button1 = ttk.Button(self, text='ON', width=5)
         button1.bind('<Button-1>', lambda event: self.wattchecker.on())
         button1.pack(anchor=tk.NW, side=tk.LEFT)
 
-        button2 = ttk.Button(frame_button, text='OFF', width=5)
+        button2 = ttk.Button(self, text='OFF', width=5)
         button2.bind('<Button-1>', lambda event: self.wattchecker.off())
         button2.pack(anchor=tk.NW, side=tk.LEFT)
 
-        button3 = ttk.Button(frame_button, text='measure', default=tk.ACTIVE)
+        button3 = ttk.Button(self, text='measure', default=tk.ACTIVE)
         button3.bind('<Button-1>', lambda event: self._measure_btn_clicked(button3))
         button3.pack(anchor=tk.NW, side=tk.LEFT)
 
-        button4 = ttk.Button(frame_button, text='clear')
+        button4 = ttk.Button(self, text='clear')
         button4.bind('<Button-1>', lambda event: self._clear_tree())
         button4.pack(anchor=tk.NE, side=tk.RIGHT)
 
-        button5 = ttk.Button(frame_button, text='save as')
+        button5 = ttk.Button(self, text='save as')
         button5.bind('<Button-1>', lambda event: self._save_csv())
         button5.pack(anchor=tk.NE, side=tk.RIGHT)
 
@@ -219,8 +218,9 @@ class main(ttk.Frame):
             button.configure(text='stop')
             self.started.set()
 
-class treeview_widget:
+class treeview_widget(ttk.Frame):
     def __init__(self, master):
+        super().__init__(master)
         self.master = master
         self.headings = ('datetime', 'wattage[W]', 'current[mA]', 'voltage[V]')
         self.tree = None
@@ -268,18 +268,17 @@ class treeview_widget:
         self.tree.delete(*self.tree.get_children())
 
     def _place_treeview(self):
-        frame_treeview = tk.Frame(self.master)
-        frame_treeview.grid(sticky=tk.NSEW)
-        frame_treeview.columnconfigure(0, weight=1)
-        frame_treeview.rowconfigure(0, weight=1)
+        self.grid(sticky=tk.NSEW)
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
 
         ttk.Style().layout('Treeview', [('Treeview.treearea', {'sticky': 'nswe'})])
-        self.tree = ttk.Treeview(frame_treeview, style='Treeview', columns=self.headings, show='headings', height=25)
+        self.tree = ttk.Treeview(self, style='Treeview', columns=self.headings, show='headings', height=25)
         self.tree.grid(row=0, column=0, sticky=tk.NSEW)
 
-        vscrollbar = ttk.Scrollbar(frame_treeview, orient=tk.VERTICAL, command=self.tree.yview)
+        vscrollbar = ttk.Scrollbar(self, orient=tk.VERTICAL, command=self.tree.yview)
         vscrollbar.grid(row=0, column=1, sticky=tk.N+tk.S)
-        hscrollbar = ttk.Scrollbar(frame_treeview, orient=tk.HORIZONTAL, command=self.tree.xview)
+        hscrollbar = ttk.Scrollbar(self, orient=tk.HORIZONTAL, command=self.tree.xview)
         hscrollbar.grid(row=1, column=0, sticky=tk.E+tk.W)
         self.tree.configure(yscrollcommand=vscrollbar.set, xscrollcommand=hscrollbar.set)
 
