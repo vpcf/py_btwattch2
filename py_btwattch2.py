@@ -193,7 +193,7 @@ class main(ttk.Frame):
         button5.pack(anchor=tk.NE, side=tk.RIGHT)
 
     def _clear_tree(self):
-        self.treeview_widget._clear_tree()
+        self.treeview_widget.clear_tree()
 
     def _save_csv(self):
         out = []
@@ -226,19 +226,19 @@ class treeview_widget(ttk.Frame):
         self.tree = None
         self.is_ascending = False
         self.active_column = self.headings[0]
-        self._place_treeview()
+        self._draw_treeview()
         self._set_columns()
 
     def add_row(self, voltage, current, wattage, timestamp):
         measurement = timestamp, round(wattage, 3), int(current), round(voltage, 2)
-        position_to_insert = self.locate_insertion_position(measurement)
+        position_to_insert = self._locate_insertion_position(measurement)
         self.tree.insert('', index=position_to_insert, values=measurement)
 
-    def sort_column(self, treeview, heading):
+    def _sort_column(self, treeview, heading):
         self.is_ascending = not self.is_ascending
         self.active_column = heading
 
-        func = lambda x: self.convert_type_by_column(x[0])
+        func = lambda x: self._convert_type_by_column(x[0])
         
         l = [(treeview.set(k, heading), k) for k in treeview.get_children('')]
         l.sort(key=func, reverse=not self.is_ascending)
@@ -246,28 +246,28 @@ class treeview_widget(ttk.Frame):
         for index, (_, item_id) in enumerate(l):
             treeview.move(item_id, '', index)
 
-    def convert_type_by_column(self, value):
+    def _convert_type_by_column(self, value):
         if self.active_column == self.headings[0]:
             return str(value)
         else:
             return float(value)
 
-    def locate_insertion_position(self, measurement):
+    def _locate_insertion_position(self, measurement):
         active_col = [self.tree.set(k, self.active_column) for k in self.tree.get_children('')]
         new_col_element = measurement[self.headings.index(self.active_column)]
         
-        lst = [self.convert_type_by_column(f) for f in active_col]
-        element = self.convert_type_by_column(new_col_element)
+        lst = [self._convert_type_by_column(f) for f in active_col]
+        element = self._convert_type_by_column(new_col_element)
             
         if self.is_ascending:
             return bisect.bisect_left(lst, element)
         else:
             return len(lst) - bisect.bisect_right(lst[::-1], element)
 
-    def _clear_tree(self):
+    def clear_tree(self):
         self.tree.delete(*self.tree.get_children())
 
-    def _place_treeview(self):
+    def _draw_treeview(self):
         self.grid(sticky=tk.NSEW)
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
@@ -288,10 +288,10 @@ class treeview_widget(ttk.Frame):
         self.tree.column(self.headings[2], width=100, minwidth=100, stretch=tk.NO)
         self.tree.column(self.headings[3], width=100, minwidth=100)
 
-        self.tree.heading(self.headings[0], text=self.headings[0], command=lambda: self.sort_column(self.tree, self.headings[0]))
-        self.tree.heading(self.headings[1], text=self.headings[1], command=lambda: self.sort_column(self.tree, self.headings[1]))
-        self.tree.heading(self.headings[2], text=self.headings[2], command=lambda: self.sort_column(self.tree, self.headings[2]))
-        self.tree.heading(self.headings[3], text=self.headings[3], command=lambda: self.sort_column(self.tree, self.headings[3]))
+        self.tree.heading(self.headings[0], text=self.headings[0], command=lambda: self._sort_column(self.tree, self.headings[0]))
+        self.tree.heading(self.headings[1], text=self.headings[1], command=lambda: self._sort_column(self.tree, self.headings[1]))
+        self.tree.heading(self.headings[2], text=self.headings[2], command=lambda: self._sort_column(self.tree, self.headings[2]))
+        self.tree.heading(self.headings[3], text=self.headings[3], command=lambda: self._sort_column(self.tree, self.headings[3]))
 
 def setup_btwattch2(bdaddr):
     wattchecker = BTWATTCH2(bdaddr)
