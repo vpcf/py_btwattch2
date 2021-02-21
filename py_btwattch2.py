@@ -134,16 +134,13 @@ class main(ttk.Frame):
     def __init__(self, master, wattchecker):
         super().__init__(master)
         self.master = master
-        self.tree = None
-        self.headings = ('datetime', 'wattage[W]', 'current[mA]', 'voltage[V]')
 
         self.wattchecker = wattchecker
         self.master.title(self.wattchecker.model_number)
-        self.wattchecker.callback = self.add_row
+        self.treeview_widget = None
 
         self._create_widgets()
-        self.active_column = self.headings[0]
-        self.is_ascending = False
+        self.wattchecker.callback = self.treeview_widget.add_row
         
         self.started = threading.Event()
         self.running = True
@@ -170,8 +167,7 @@ class main(ttk.Frame):
         self.master.columnconfigure(0, weight=1)
         self.master.rowconfigure(1, weight=1)
         self._create_button()
-        self._place_treeview()
-        self._set_columns()
+        self.treeview_widget = treeview_widget(self.master)
       
     def _create_button(self):
         frame_button = tk.Frame(self.master)
@@ -190,17 +186,20 @@ class main(ttk.Frame):
         button3.pack(anchor=tk.NW, side=tk.LEFT)
 
         button4 = ttk.Button(frame_button, text='clear')
-        button4.bind('<Button-1>', lambda event: self.tree.delete(*self.tree.get_children()))
+        button4.bind('<Button-1>', lambda event: self._clear_tree())
         button4.pack(anchor=tk.NE, side=tk.RIGHT)
 
         button5 = ttk.Button(frame_button, text='save as')
         button5.bind('<Button-1>', lambda event: self._save_csv())
         button5.pack(anchor=tk.NE, side=tk.RIGHT)
 
+    def _clear_tree(self):
+        self.treeview_widget._clear_tree()
+
     def _save_csv(self):
         out = []
-        for child in self.tree.get_children(''):
-            row = self.tree.item(child, 'values')
+        for child in self.treeview_widget.tree.get_children(''):
+            row = self.treeview_widget.tree.item(child, 'values')
             out.append(row)
         
         fname = tkfd.asksaveasfilename(filetypes=[('CSV File', '*.csv'),('', '*.*')], defaultextension='.csv', initialdir='./')
@@ -219,6 +218,16 @@ class main(ttk.Frame):
         else:
             button.configure(text='stop')
             self.started.set()
+
+class treeview_widget:
+    def __init__(self, master):
+        self.master = master
+        self.headings = ('datetime', 'wattage[W]', 'current[mA]', 'voltage[V]')
+        self.tree = None
+        self.is_ascending = False
+        self.active_column = self.headings[0]
+        self._place_treeview()
+        self._set_columns()
 
     def add_row(self, voltage, current, wattage, timestamp):
         measurement = timestamp, round(wattage, 3), int(current), round(voltage, 2)
@@ -254,6 +263,9 @@ class main(ttk.Frame):
             return bisect.bisect_left(lst, element)
         else:
             return len(lst) - bisect.bisect_right(lst[::-1], element)
+
+    def _clear_tree(self):
+        self.tree.delete(*self.tree.get_children())
 
     def _place_treeview(self):
         frame_treeview = tk.Frame(self.master)
