@@ -111,21 +111,25 @@ class BTWATTCH2:
 
     def _cache_message(self):
         buffer = bytearray()
-        def _cache_message_(sender: int, data: bytearray):
-            if data[0] == CMD_HEADER[0]:
-                nonlocal buffer
-                buffer = buffer + data
+        def _cache_message_(sender: int, value: bytearray):
+            nonlocal buffer
+            buffer = buffer + value
+        
+            if buffer[0] == CMD_HEADER[0]:
+                if crc8(buffer[3:]) == 0:
+                    self._classify_message(buffer)
+                    buffer.clear()
             else:
-                data = buffer + data
-                if data[3] == PAYLOAD_REALTIME_MONITORING[0]:
-                    measurement = self.decode_measurement(data)
-                    self.callback(**measurement)
-                else:
-                    pass    # to be implemented
-                
                 buffer.clear()
         
         return _cache_message_
+
+    def _classify_message(self, data):
+        if data[3] == PAYLOAD_REALTIME_MONITORING[0]:
+            measurement = self.decode_measurement(data)
+            self.callback(**measurement)
+        else:
+            pass    # to be implemented
 
     def decode_measurement(self, data: bytearray):
         return {
