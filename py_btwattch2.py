@@ -135,11 +135,12 @@ class main(ttk.Frame):
         super().__init__(master)
         self.master = master
 
+        self._create_button()
+        self.treeview_widget = treeview_widget(self.master)
+        self._organize_widgets()
+
         self.wattchecker = wattchecker
         self.master.title(self.wattchecker.model_number)
-        self.treeview_widget = None
-
-        self._create_widgets()
         self.wattchecker.callback = self.treeview_widget.add_row
         
         self.started = threading.Event()
@@ -162,16 +163,16 @@ class main(ttk.Frame):
             else:
                 self.started.wait(3)
         
-    def _create_widgets(self):
+    def _organize_widgets(self):
         self.master.resizable(True, True)
         self.master.columnconfigure(0, weight=1)
         self.master.rowconfigure(1, weight=1)
-        self._create_button()
-        self.treeview_widget = treeview_widget(self.master)
+        self.grid(row=0)
+        self.treeview_widget.grid(row=1)
       
     def _create_button(self):
         self.grid(sticky=tk.NSEW)
-
+        
         button1 = ttk.Button(self, text='ON', width=5)
         button1.bind('<Button-1>', lambda event: self.wattchecker.on())
         button1.pack(anchor=tk.NW, side=tk.LEFT)
