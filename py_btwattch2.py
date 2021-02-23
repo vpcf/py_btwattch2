@@ -33,7 +33,7 @@ def crc8(payload: bytearray):
     
     return reduce(lambda x, y: crc1(y ^ x), payload, 0x00)
 
-def print_measurement(voltage, current, wattage, timestamp):
+def print_measurement(timestamp, wattage, voltage, current):
     print('{{"datetime":"{0}", "wattage":{1:.3f}, "voltage":{2:.3f}, "current":{3:.3f}}}'.format(timestamp, wattage, voltage, current))
 
 class BTWATTCH2:
@@ -62,7 +62,7 @@ class BTWATTCH2:
     
     def enable_notify(self):
         async def _enable_notify():
-            await self.client.start_notify(self.Rx, self.format_message())
+            await self.client.start_notify(self.Rx, self._cache_message())
         
         return self.loop.run_until_complete(_enable_notify())
 
@@ -109,26 +109,31 @@ class BTWATTCH2:
         ms = datetime.datetime.now().microsecond
         self.loop.run_until_complete(asyncio.sleep(1.05 - ms/1e6))
 
-    def format_message(self):
+    def _cache_message(self):
         buffer = bytearray()
-        def _format_message(sender: int, data: bytearray):
+        def _cache_message_(sender: int, data: bytearray):
             if data[0] == CMD_HEADER[0]:
                 nonlocal buffer
                 buffer = buffer + data
             else:
                 data = buffer + data
                 if data[3] == PAYLOAD_REALTIME_MONITORING[0]:
-                    voltage = int.from_bytes(data[5:11], 'little') / (16**6)
-                    current = int.from_bytes(data[11:17], 'little') / (32**6) * 1000
-                    wattage = int.from_bytes(data[17:23], 'little') / (16**6)
-                    timestamp = datetime.datetime(1900+data[28], data[27]+1, *data[26:22:-1])
-                    self.callback(voltage, current, wattage, timestamp)
+                    measurement = self.decode_measurement(data)
+                    self.callback(**measurement)
                 else:
                     pass    # to be implemented
                 
                 buffer.clear()
         
-        return _format_message
+        return _cache_message_
+
+    def decode_measurement(self, data: bytearray):
+        return {
+            "voltage": int.from_bytes(data[5:11], 'little') / (16**6),
+            "current": int.from_bytes(data[11:17], 'little') / (32**6) * 1000,
+            "wattage": int.from_bytes(data[17:23], 'little') / (16**6),
+            "timestamp": datetime.datetime(1900+data[28], data[27]+1, *data[26:22:-1]),
+        }
 
 class main(ttk.Frame):
     def __init__(self, master, wattchecker):
@@ -230,7 +235,7 @@ class treeview_widget(ttk.Frame):
         self._draw_treeview()
         self._set_columns()
 
-    def add_row(self, voltage, current, wattage, timestamp):
+    def add_row(self, timestamp, wattage, voltage, current):
         measurement = timestamp, round(wattage, 3), int(current), round(voltage, 2)
         position_to_insert = self._locate_insertion_position(measurement)
         self.tree.insert('', index=position_to_insert, values=measurement)
