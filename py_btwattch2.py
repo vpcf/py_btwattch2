@@ -10,15 +10,15 @@ from functools import reduce
 import bisect
 import csv
 
-GATT_CHARACTERISTIC_UUID_TX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
-GATT_CHARACTERISTIC_UUID_RX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
-GATT_CHARACTERISTIC_DEVICE_NAME = '00002A24-0000-1000-8000-00805F9B34FB'
+UART_TX_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
+UART_RX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
+DEVICE_NAME_UUID = '00002A24-0000-1000-8000-00805F9B34FB'
 CMD_HEADER = bytearray.fromhex('aa')
 
-PAYLOAD_TIMER = bytearray.fromhex('01')
-PAYLOAD_TURN_ON = bytearray.fromhex('a701')
-PAYLOAD_TURN_OFF = bytearray.fromhex('a700')
-PAYLOAD_REALTIME_MONITORING = bytearray.fromhex('08')
+ID_TIMER = bytearray.fromhex('01')
+ID_TURN_ON = bytearray.fromhex('a701')
+ID_TURN_OFF = bytearray.fromhex('a700')
+ID_ENERGY_USAGE = bytearray.fromhex('08')
 
 def crc8(payload: bytearray):
     POLYNOMIAL = 0x85
@@ -31,7 +31,7 @@ def crc8(payload: bytearray):
         else:
             return crc1(crc << 1, step+1)
     
-    return reduce(lambda x, y: crc1(y ^ x), payload, 0x00)
+    return reduce(lambda crc, input_byte: crc1(input_byte ^ crc), payload, 0x00)
 
 def print_measurement(timestamp, wattage, voltage, current):
     print('{{"datetime":"{0}", "wattage":{1:.3f}, "voltage":{2:.3f}, "current":{3:.3f}}}'.format(timestamp, wattage, voltage, current))
@@ -43,9 +43,9 @@ class BTWATTCH2:
         self.loop = asyncio.get_event_loop()
 
         self.services = self.loop.run_until_complete(self.setup())
-        self.Tx = self.services.get_characteristic(GATT_CHARACTERISTIC_UUID_TX)
-        self.Rx = self.services.get_characteristic(GATT_CHARACTERISTIC_UUID_RX)
-        self.char_device_name = self.services.get_characteristic(GATT_CHARACTERISTIC_DEVICE_NAME)
+        self.Tx = self.services.get_characteristic(UART_TX_UUID)
+        self.Rx = self.services.get_characteristic(UART_RX_UUID)
+        self.char_device_name = self.services.get_characteristic(DEVICE_NAME_UUID)
         self.enable_notify()
 
         self.callback = print_measurement
@@ -72,13 +72,13 @@ class BTWATTCH2:
         
         return self.loop.run_until_complete(_disable_notify())
 
-    def cmd(self, payload: bytearray):
+    def pack_command(self, payload: bytearray):
         pld_length = len(payload).to_bytes(2, 'big')
         return CMD_HEADER + pld_length + payload + crc8(payload).to_bytes(1, 'big')
 
     def write(self, payload: bytearray):
         async def _write(payload):
-            command = self.cmd(payload)
+            command = self.pack_command(payload)
             await self.client.write_gatt_char(self.Tx, command, True)
             
         if self.loop.is_running():
@@ -91,7 +91,7 @@ class BTWATTCH2:
 
         d = datetime.datetime.now().timetuple()
         payload = (
-            PAYLOAD_TIMER[0], 
+            ID_TIMER[0], 
             d.tm_sec, d.tm_min, d.tm_hour, 
             d.tm_mday, d.tm_mon-1, d.tm_year-1900, 
             d.tm_wday
@@ -99,13 +99,13 @@ class BTWATTCH2:
         self.write(bytearray(payload))
 
     def on(self):
-        self.write(PAYLOAD_TURN_ON)
+        self.write(ID_TURN_ON)
         
     def off(self):
-        self.write(PAYLOAD_TURN_OFF)
+        self.write(ID_TURN_OFF)
 
     def measure(self):
-        self.write(PAYLOAD_REALTIME_MONITORING)
+        self.write(ID_ENERGY_USAGE)
         ms = datetime.datetime.now().microsecond
         self.loop.run_until_complete(asyncio.sleep(1.05 - ms/1e6))
 
@@ -117,15 +117,15 @@ class BTWATTCH2:
         
             if buffer[0] == CMD_HEADER[0]:
                 if crc8(buffer[3:]) == 0:
-                    self._classify_message(buffer)
+                    self._classify_response(buffer)
                     buffer.clear()
             else:
                 buffer.clear()
         
         return _cache_message_
 
-    def _classify_message(self, data):
-        if data[3] == PAYLOAD_REALTIME_MONITORING[0]:
+    def _classify_response(self, data):
+        if data[3] == ID_ENERGY_USAGE[0]:
             measurement = self.decode_measurement(data)
             self.callback(**measurement)
         else:
