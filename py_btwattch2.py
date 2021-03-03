@@ -116,8 +116,14 @@ class BTWATTCH2:
             buffer = buffer + value
         
             if buffer[0] == CMD_HEADER[0]:
-                if crc8(buffer[3:]) == 0:
-                    self._classify_response(buffer)
+                payload_length = int.from_bytes(buffer[1:3], 'big')
+                if len(buffer[3:-1]) < payload_length:
+                    pass
+                elif len(buffer[3:-1]) == payload_length:
+                    if crc8(buffer[3:]) == 0:
+                        self._classify_response(buffer)
+                    buffer.clear()
+                else:
                     buffer.clear()
             else:
                 buffer.clear()
