@@ -239,11 +239,10 @@ class treeview_widget(ttk.Frame):
         super().__init__(master)
         self.master = master
         self.headings = ('datetime', 'wattage[W]', 'current[mA]', 'voltage[V]')
-        self.tree = None
         self.is_ascending = False
         self.active_column = self.headings[0]
-        self._draw_treeview()
-        self._set_columns()
+        self.tree = self._draw_treeview()
+        self._set_columns(self.tree, self.headings)
 
     def add_row(self, timestamp, wattage, voltage, current):
         measurement = timestamp, round(wattage, 3), int(current), round(voltage, 2)
@@ -289,25 +288,27 @@ class treeview_widget(ttk.Frame):
         self.rowconfigure(0, weight=1)
 
         ttk.Style().layout('Treeview', [('Treeview.treearea', {'sticky': 'nswe'})])
-        self.tree = ttk.Treeview(self, style='Treeview', columns=self.headings, show='headings', height=25)
-        self.tree.grid(row=0, column=0, sticky=tk.NSEW)
+        tree = ttk.Treeview(self, style='Treeview', columns=self.headings, show='headings', height=25)
+        tree.grid(row=0, column=0, sticky=tk.NSEW)
 
-        vscrollbar = ttk.Scrollbar(self, orient=tk.VERTICAL, command=self.tree.yview)
+        vscrollbar = ttk.Scrollbar(self, orient=tk.VERTICAL, command=tree.yview)
         vscrollbar.grid(row=0, column=1, sticky=tk.N+tk.S)
-        hscrollbar = ttk.Scrollbar(self, orient=tk.HORIZONTAL, command=self.tree.xview)
+        hscrollbar = ttk.Scrollbar(self, orient=tk.HORIZONTAL, command=tree.xview)
         hscrollbar.grid(row=1, column=0, sticky=tk.E+tk.W)
-        self.tree.configure(yscrollcommand=vscrollbar.set, xscrollcommand=hscrollbar.set)
+        tree.configure(yscrollcommand=vscrollbar.set, xscrollcommand=hscrollbar.set)
 
-    def _set_columns(self):
-        self.tree.column(self.headings[0], width=150, minwidth=100, stretch=tk.NO)
-        self.tree.column(self.headings[1], width=100, minwidth=100, stretch=tk.NO)
-        self.tree.column(self.headings[2], width=100, minwidth=100, stretch=tk.NO)
-        self.tree.column(self.headings[3], width=100, minwidth=100)
+        return tree
 
-        self.tree.heading(self.headings[0], text=self.headings[0], command=lambda: self._sort_column(self.tree, self.headings[0]))
-        self.tree.heading(self.headings[1], text=self.headings[1], command=lambda: self._sort_column(self.tree, self.headings[1]))
-        self.tree.heading(self.headings[2], text=self.headings[2], command=lambda: self._sort_column(self.tree, self.headings[2]))
-        self.tree.heading(self.headings[3], text=self.headings[3], command=lambda: self._sort_column(self.tree, self.headings[3]))
+    def _set_columns(self, tree, headings):
+        tree.column(headings[0], width=150, minwidth=100, stretch=tk.NO)
+        tree.column(headings[1], width=100, minwidth=100, stretch=tk.NO)
+        tree.column(headings[2], width=100, minwidth=100, stretch=tk.NO)
+        tree.column(headings[3], width=100, minwidth=100)
+
+        tree.heading(headings[0], text=headings[0], command=lambda: self._sort_column(tree, headings[0]))
+        tree.heading(headings[1], text=headings[1], command=lambda: self._sort_column(tree, headings[1]))
+        tree.heading(headings[2], text=headings[2], command=lambda: self._sort_column(tree, headings[2]))
+        tree.heading(headings[3], text=headings[3], command=lambda: self._sort_column(tree, headings[3]))
 
 def setup_btwattch2(bdaddr):
     wattchecker = BTWATTCH2(bdaddr)
