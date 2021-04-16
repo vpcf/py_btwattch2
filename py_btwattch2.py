@@ -45,7 +45,7 @@ class BTWATTCH2:
         self.Tx = self.services.get_characteristic(UART_TX_UUID)
         self.Rx = self.services.get_characteristic(UART_RX_UUID)
         self.char_device_name = self.services.get_characteristic(DEVICE_NAME_UUID)
-        self.enable_notify()
+        self.loop.run_until_complete(self.enable_notify())
 
         self.callback = print_measurement
 
@@ -62,32 +62,20 @@ class BTWATTCH2:
         await self.client.connect()
         return await self.client.get_services()
     
-    def enable_notify(self):
-        async def _enable_notify():
-            await self.client.start_notify(self.Rx, self._cache_message())
+    async def enable_notify(self):
+        await self.client.start_notify(self.Rx, self._cache_message())
         
-        return self.loop.run_until_complete(_enable_notify())
-
-    def disable_notify(self):
-        async def _disable_notify():
-            await self.client.stop_notify(self.Rx)
-        
-        return self.loop.run_until_complete(_disable_notify())
+    async def disable_notify(self):
+        await self.client.stop_notify(self.Rx)
 
     def pack_command(self, payload: bytearray):
         pld_length = len(payload).to_bytes(2, 'big')
         return CMD_HEADER + pld_length + payload + crc8(payload).to_bytes(1, 'big')
 
-    def write(self, payload: bytearray):
-        async def _write(payload):
-            command = self.pack_command(payload)
-            await self.client.write_gatt_char(self.Tx, command, True)
+    async def _write(self, payload: bytearray):
+        command = self.pack_command(payload)
+        return await self.client.write_gatt_char(self.Tx, command, True)
             
-        if self.loop.is_running():
-            return self.loop.create_task(_write(payload))
-        else:
-            return self.loop.run_until_complete(_write(payload))
-
     def set_timer(self):
         time.sleep(1 - datetime.datetime.now().microsecond/1e6)
 
@@ -98,16 +86,16 @@ class BTWATTCH2:
             d.tm_mday, d.tm_mon-1, d.tm_year-1900, 
             d.tm_wday
         )
-        self.write(bytearray(payload))
+        self._write(bytearray(payload))
 
     def on(self):
-        self.write(ID_TURN_ON)
+        self.loop.create_task(self._write(ID_TURN_ON))
         
     def off(self):
-        self.write(ID_TURN_OFF)
+        self.loop.create_task(self._write(ID_TURN_OFF))
 
     def measure(self):
-        self.write(ID_ENERGY_USAGE)
+        self.loop.run_until_complete(self._write(ID_ENERGY_USAGE))
         ms = datetime.datetime.now().microsecond
         self.loop.run_until_complete(asyncio.sleep(1.05 - ms/1e6))
 
