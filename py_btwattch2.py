@@ -86,7 +86,8 @@ class BTWATTCH2:
             d.tm_mday, d.tm_mon-1, d.tm_year-1900, 
             d.tm_wday
         )
-        self._write(bytearray(payload))
+
+        self.loop.create_task(self._write(bytearray(payload)))
 
     def on(self):
         self.loop.create_task(self._write(ID_TURN_ON))
