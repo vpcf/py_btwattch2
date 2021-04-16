@@ -38,8 +38,7 @@ def print_measurement(timestamp, wattage, voltage, current):
 
 class BTWATTCH2:
     def __init__(self, address):
-        self.address = address
-        self.client = None
+        self.client = BleakClient(address)
         self.loop = asyncio.get_event_loop()
 
         self.services = self.loop.run_until_complete(self.setup())
@@ -51,12 +50,15 @@ class BTWATTCH2:
         self.callback = print_measurement
 
     @property
+    def address(self):
+        return self.client.address
+
+    @property
     def model_number(self):
         model_number_bytearray = asyncio.run(self.client.read_gatt_char(self.char_device_name))
         return model_number_bytearray.decode()
 
     async def setup(self):
-        self.client = BleakClient(self.address)
         await self.client.connect()
         return await self.client.get_services()
     
@@ -184,7 +186,7 @@ class main(ttk.Frame):
         self.master.rowconfigure(1, weight=1)
         self.grid(row=0)
         self.treeview_widget.grid(row=1)
-      
+
     def _create_button(self):
         self.grid(sticky=tk.NSEW)
         
