@@ -34,7 +34,9 @@ def crc8(payload: bytearray):
     return reduce(lambda crc, input_byte: crc1(input_byte ^ crc), payload, 0x00)
 
 def print_measurement(timestamp, wattage, voltage, current):
-    print('{{"datetime":"{0}", "wattage":{1:.3f}, "voltage":{2:.3f}, "current":{3:.3f}}}'.format(timestamp, wattage, voltage, current))
+    print('{{"datetime":"{0}", "wattage":{1:.3f}, "voltage":{2:.3f}, "current":{3:.3f}}}'
+            .format(timestamp, wattage, voltage, current)
+        )
 
 class BTWATTCH2:
     def __init__(self, address):
@@ -45,8 +47,7 @@ class BTWATTCH2:
         self.Tx = self.services.get_characteristic(UART_TX_UUID)
         self.Rx = self.services.get_characteristic(UART_RX_UUID)
         self.char_device_name = self.services.get_characteristic(DEVICE_NAME_UUID)
-        self.loop.run_until_complete(self.enable_notify())
-
+        self.loop.create_task(self.enable_notify())
         self.callback = print_measurement
 
     @property
@@ -55,8 +56,8 @@ class BTWATTCH2:
 
     @property
     def model_number(self):
-        model_number_bytearray = asyncio.run(self.client.read_gatt_char(self.char_device_name))
-        return model_number_bytearray.decode()
+        read_device_name = self.client.read_gatt_char(self.char_device_name)
+        return self.loop.run_until_complete(read_device_name).decode()
 
     async def setup(self):
         await self.client.connect()
@@ -75,7 +76,7 @@ class BTWATTCH2:
     async def _write(self, payload: bytearray):
         command = self.pack_command(payload)
         return await self.client.write_gatt_char(self.Tx, command, True)
-            
+
     def set_timer(self):
         time.sleep(1 - datetime.datetime.now().microsecond/1e6)
 
@@ -205,7 +206,11 @@ class main(ttk.Frame):
             row = self.treeview_widget.tree.item(child, 'values')
             out.append(row)
         
-        fname = tkfd.asksaveasfilename(filetypes=[('CSV File', '*.csv'),('', '*.*')], defaultextension='.csv', initialdir='./')
+        fname = tkfd.asksaveasfilename(
+            filetypes=[('CSV File', '*.csv'), ('', '*.*')], 
+            defaultextension='.csv', 
+            initialdir='./'
+        )
         if fname:
             with open(fname, mode='w', newline='') as f:
                 writer = csv.writer(f)
