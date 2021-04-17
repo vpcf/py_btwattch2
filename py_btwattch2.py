@@ -87,7 +87,7 @@ class BTWATTCH2:
             d.tm_wday
         )
 
-        self.loop.create_task(self._write(bytearray(payload)))
+        self.loop.run_until_complete(self._write(bytearray(payload)))
 
     def on(self):
         self.loop.create_task(self._write(ID_TURN_ON))
@@ -97,8 +97,8 @@ class BTWATTCH2:
 
     def measure(self):
         self.loop.run_until_complete(self._write(ID_ENERGY_USAGE))
-        ms = datetime.datetime.now().microsecond
-        self.loop.run_until_complete(asyncio.sleep(1.05 - ms/1e6))
+        interval = 1.05 - datetime.datetime.now().microsecond/1e6
+        self.loop.run_until_complete(asyncio.sleep(interval))
 
     def _cache_message(self):
         buffer = bytearray()
