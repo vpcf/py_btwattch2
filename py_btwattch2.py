@@ -73,9 +73,15 @@ class BTWATTCH2:
         pld_length = len(payload).to_bytes(2, 'big')
         return CMD_HEADER + pld_length + payload + crc8(payload).to_bytes(1, 'big')
 
-    async def _write(self, payload: bytearray):
-        command = self.pack_command(payload)
-        return await self.client.write_gatt_char(self.Tx, command, True)
+    def _write(self, payload: bytearray):
+        async def _write_(payload):
+            command = self.pack_command(payload)
+            await self.client.write_gatt_char(self.Tx, command, True)
+            
+        if self.loop.is_running():
+            return self.loop.create_task(_write_(payload))
+        else:
+            return self.loop.run_until_complete(_write_(payload))
 
     def set_timer(self):
         time.sleep(1 - datetime.datetime.now().microsecond/1e6)
@@ -87,17 +93,16 @@ class BTWATTCH2:
             d.tm_mday, d.tm_mon-1, d.tm_year-1900, 
             d.tm_wday
         )
-
-        self.loop.run_until_complete(self._write(bytearray(payload)))
+        self._write(bytearray(payload))
 
     def on(self):
-        self.loop.create_task(self._write(ID_TURN_ON))
-        
+        self._write(ID_TURN_ON)
+
     def off(self):
-        self.loop.create_task(self._write(ID_TURN_OFF))
+        self._write(ID_TURN_OFF)
 
     def measure(self):
-        self.loop.run_until_complete(self._write(ID_ENERGY_USAGE))
+        self._write(ID_ENERGY_USAGE)
         interval = 1.05 - datetime.datetime.now().microsecond/1e6
         self.loop.run_until_complete(asyncio.sleep(interval))
 
